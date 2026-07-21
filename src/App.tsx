@@ -1644,7 +1644,7 @@ export default function App() {
               <div className="space-y-2 bg-zinc-50 border border-zinc-200/80 rounded-lg p-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 flex items-center space-x-1">
-                    <span>Aparte RIP Hotfolder (Print PDF's)</span>
+                    <span>Separate RIP Hotfolder (Print PDFs)</span>
                   </label>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -1654,7 +1654,7 @@ export default function App() {
                     onClick={handleSelectRipHotfolder}
                     className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold py-1.5 px-2.5 rounded transition shrink-0 cursor-pointer disabled:opacity-50"
                   >
-                    {ripDirHandle ? 'Folder Wijzigen' : 'Selecteer RIP Folder'}
+                    {ripDirHandle ? 'Change Folder' : 'Select RIP Folder'}
                   </button>
                   {ripDirHandle ? (
                     <div className="flex items-center space-x-1.5 min-w-0 bg-white border border-emerald-200 px-2 py-1 rounded shadow-2xs">
@@ -1666,13 +1666,13 @@ export default function App() {
                         type="button"
                         onClick={handleClearRipHotfolder}
                         className="text-zinc-400 hover:text-red-500 p-0.5 rounded transition shrink-0 ml-1"
-                        title="Ontkoppel RIP Folder"
+                        title="Disconnect RIP Folder"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-zinc-400 italic">Geen folder gekozen</span>
+                    <span className="text-[10px] text-zinc-400 italic">No folder selected</span>
                   )}
                 </div>
               </div>
@@ -1681,7 +1681,7 @@ export default function App() {
               <div className="space-y-2 bg-zinc-50 border border-zinc-200/80 rounded-lg p-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 flex items-center space-x-1">
-                    <span>Aparte Zünd Hotfolder (Cut PDF's)</span>
+                    <span>Separate Zünd Hotfolder (Cut PDFs)</span>
                   </label>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -1691,7 +1691,7 @@ export default function App() {
                     onClick={handleSelectZundHotfolder}
                     className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold py-1.5 px-2.5 rounded transition shrink-0 cursor-pointer disabled:opacity-50"
                   >
-                    {zundDirHandle ? 'Folder Wijzigen' : 'Selecteer Zünd Folder'}
+                    {zundDirHandle ? 'Change Folder' : 'Select Zünd Folder'}
                   </button>
                   {zundDirHandle ? (
                     <div className="flex items-center space-x-1.5 min-w-0 bg-white border border-emerald-200 px-2 py-1 rounded shadow-2xs">
@@ -1703,13 +1703,13 @@ export default function App() {
                         type="button"
                         onClick={handleClearZundHotfolder}
                         className="text-zinc-400 hover:text-red-500 p-0.5 rounded transition shrink-0 ml-1"
-                        title="Ontkoppel Zünd Folder"
+                        title="Disconnect Zünd Folder"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-zinc-400 italic">Geen folder gekozen</span>
+                    <span className="text-[10px] text-zinc-400 italic">No folder selected</span>
                   )}
                 </div>
               </div>
