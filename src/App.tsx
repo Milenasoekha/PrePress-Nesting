@@ -1644,7 +1644,7 @@ export default function App() {
               <div className="space-y-2 bg-zinc-50 border border-zinc-200/80 rounded-lg p-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 flex items-center space-x-1">
-                    <span>Separate RIP Hotfolder (Print PDFs)</span>
+                    <span>RIP Hotfolder (Print PDFs)</span>
                   </label>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -1681,7 +1681,7 @@ export default function App() {
               <div className="space-y-2 bg-zinc-50 border border-zinc-200/80 rounded-lg p-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 flex items-center space-x-1">
-                    <span>Separate Zünd Hotfolder (Cut PDFs)</span>
+                    <span>Zünd Hotfolder (Cut PDFs)</span>
                   </label>
                 </div>
                 <div className="flex items-center justify-between gap-2">
