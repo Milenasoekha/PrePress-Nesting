@@ -4,8 +4,19 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { PDFDocument, PDFName, PDFNumber, PDFOperator, pushGraphicsState, popGraphicsState, rgb, degrees, StandardFonts } from 'pdf-lib';
 import JSZip from 'jszip';
-import * as _archiver from 'archiver';
-const archiver = ((_archiver as any).default || _archiver) as any;
+import * as archiverModule from 'archiver';
+
+function createZipArchive(options?: any) {
+  const ZipClass = (archiverModule as any).ZipArchive || (archiverModule as any).default?.ZipArchive;
+  if (ZipClass) {
+    return new ZipClass(options);
+  }
+  const archiverFn = (archiverModule as any).default || archiverModule;
+  if (typeof archiverFn === 'function') {
+    return archiverFn('zip', options);
+  }
+  throw new Error('Unable to initialize Zip archive stream handler');
+}
 import sharp from 'sharp';
 import qrcode from 'qrcode';
 
@@ -538,7 +549,7 @@ async function startServer() {
       }
 
       // Create ZIP container
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      const archive = createZipArchive({ zlib: { level: 9 } });
 
       // Helper function to draw registration dots
       const drawRegistrationDots = (page: any, wMm: number, hMm: number, isBack: boolean = false) => {

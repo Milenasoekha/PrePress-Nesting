@@ -144,6 +144,7 @@ export default function App() {
         return;
       }
       const handle = await (window as any).showDirectoryPicker({
+        id: 'rip_hotfolder_destination',
         mode: 'readwrite'
       });
       setRipDirHandle(handle);
@@ -153,7 +154,7 @@ export default function App() {
         if (err.message && err.message.includes("sub frames")) {
           showAlert("Security Restriction: Browsers block local file picker requests from inside an iframe. Please open this app in a new window/tab to select your Hotfolder.", "Open in New Tab Required");
         } else {
-          showAlert(`Failed to select directory: ${err.message}`, "Error");
+          showAlert(`Failed to select RIP directory: ${err.message}`, "Error");
         }
       }
     }
@@ -170,6 +171,7 @@ export default function App() {
         return;
       }
       const handle = await (window as any).showDirectoryPicker({
+        id: 'zund_hotfolder_destination',
         mode: 'readwrite'
       });
       setZundDirHandle(handle);
@@ -179,10 +181,18 @@ export default function App() {
         if (err.message && err.message.includes("sub frames")) {
           showAlert("Security Restriction: Browsers block local file picker requests from inside an iframe. Please open this app in a new window/tab to select your Hotfolder.", "Open in New Tab Required");
         } else {
-          showAlert(`Failed to select directory: ${err.message}`, "Error");
+          showAlert(`Failed to select Zünd directory: ${err.message}`, "Error");
         }
       }
     }
+  };
+
+  const handleClearRipHotfolder = () => {
+    setRipDirHandle(null);
+  };
+
+  const handleClearZundHotfolder = () => {
+    setZundDirHandle(null);
   };
 
   // Default copies for newly uploaded files
@@ -894,7 +904,7 @@ export default function App() {
 
       const blob = await response.blob();
 
-      if (isHotfolderRoutingEnabled && ripDirHandle && zundDirHandle) {
+      if (isHotfolderRoutingEnabled && (ripDirHandle || zundDirHandle)) {
         setGenerationStep("Extracting and Routing to Hotfolders...");
         try {
           const zipInstance = new JSZip();
@@ -902,30 +912,65 @@ export default function App() {
           
           let ripWrittenCount = 0;
           let zundWrittenCount = 0;
+          const unhandledFiles: { name: string; data: Uint8Array }[] = [];
           const filesToProcess = Object.entries(loadedZip.files).filter(([_, zipFile]) => !zipFile.dir);
 
           for (const [fileName, zipFile] of filesToProcess) {
             const fileData = await zipFile.async("uint8array");
             
             if (fileName.includes("_Print")) {
-              // Write to RIP Hotfolder
-              const fileHandle = await ripDirHandle.getFileHandle(fileName, { create: true });
-              const writable = await fileHandle.createWritable();
-              await writable.write(fileData);
-              await writable.close();
-              ripWrittenCount++;
+              if (ripDirHandle) {
+                const fileHandle = await ripDirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(fileData);
+                await writable.close();
+                ripWrittenCount++;
+              } else {
+                unhandledFiles.push({ name: fileName, data: fileData });
+              }
             } else if (fileName.includes("_Zund")) {
-              // Write to Zünd Hotfolder
-              const fileHandle = await zundDirHandle.getFileHandle(fileName, { create: true });
-              const writable = await fileHandle.createWritable();
-              await writable.write(fileData);
-              await writable.close();
-              zundWrittenCount++;
+              if (zundDirHandle) {
+                const fileHandle = await zundDirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(fileData);
+                await writable.close();
+                zundWrittenCount++;
+              } else {
+                unhandledFiles.push({ name: fileName, data: fileData });
+              }
+            } else {
+              unhandledFiles.push({ name: fileName, data: fileData });
             }
           }
           
-          showAlert(`Successfully routed ${ripWrittenCount} Print PDF(s) to RIP Hotfolder and ${zundWrittenCount} Cut PDF(s) to Zünd Hotfolder!`, "Routing Successful");
-          setGenerationStep("Success! Files routed to hotfolders.");
+          const statusNotes: string[] = [];
+          if (ripWrittenCount > 0) {
+            statusNotes.push(`${ripWrittenCount} Print PDF(s) → RIP Hotfolder (${ripDirHandle?.name || 'Selected Folder'})`);
+          }
+          if (zundWrittenCount > 0) {
+            statusNotes.push(`${zundWrittenCount} Cut PDF(s) → Zünd Hotfolder (${zundDirHandle?.name || 'Selected Folder'})`);
+          }
+
+          if (unhandledFiles.length > 0) {
+            const remainingZip = new JSZip();
+            for (const item of unhandledFiles) {
+              remainingZip.file(item.name, item.data);
+            }
+            const remainingBlob = await remainingZip.generateAsync({ type: 'blob' });
+            const url = window.URL.createObjectURL(remainingBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            const rawName = (jobName || 'Imposition_Job').replace(/\s+/g, '_');
+            link.setAttribute('download', `${rawName}_Remaining_Files.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            statusNotes.push(`${unhandledFiles.length} file(s) downloaded via browser (hotfolder not selected)`);
+          }
+
+          showAlert(`Hotfolder Routing Result:\n• ${statusNotes.join('\n• ')}`, "Hotfolder Routing Completed");
+          setGenerationStep("Success! Files processed and routed.");
         } catch (routingErr: any) {
           console.error("Hotfolder routing error:", routingErr);
           throw new Error(`Failed to route files to hotfolders. Please ensure browser permissions are granted. Error: ${routingErr.message}`);
@@ -1596,53 +1641,75 @@ export default function App() {
 
             <div className={`space-y-3.5 transition-opacity duration-200 ${isHotfolderRoutingEnabled ? 'opacity-100' : 'opacity-40'}`}>
               {/* RIP Hotfolder */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 block">
-                  RIP Hotfolder Destination
-                </label>
+              <div className="space-y-2 bg-zinc-50 border border-zinc-200/80 rounded-lg p-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 flex items-center space-x-1">
+                    <span>Aparte RIP Hotfolder (Print PDF's)</span>
+                  </label>
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <button
                     type="button"
+                    disabled={!isHotfolderRoutingEnabled}
                     onClick={handleSelectRipHotfolder}
-                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 text-[10px] font-bold py-1.5 px-2.5 rounded transition shrink-0"
+                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold py-1.5 px-2.5 rounded transition shrink-0 cursor-pointer disabled:opacity-50"
                   >
-                    Select RIP Hotfolder
+                    {ripDirHandle ? 'Folder Wijzigen' : 'Selecteer RIP Folder'}
                   </button>
                   {ripDirHandle ? (
-                    <span className="text-[11px] text-emerald-600 flex items-center space-x-1 min-w-0" id="rip-hotfolder-confirmation">
+                    <div className="flex items-center space-x-1.5 min-w-0 bg-white border border-emerald-200 px-2 py-1 rounded shadow-2xs">
                       <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span className="truncate font-semibold" title={ripDirHandle.name}>
+                      <span className="text-[11px] font-semibold text-emerald-700 truncate" title={ripDirHandle.name} id="rip-hotfolder-confirmation">
                         {ripDirHandle.name}
                       </span>
-                    </span>
+                      <button
+                        type="button"
+                        onClick={handleClearRipHotfolder}
+                        className="text-zinc-400 hover:text-red-500 p-0.5 rounded transition shrink-0 ml-1"
+                        title="Ontkoppel RIP Folder"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   ) : (
-                    <span className="text-[10px] text-zinc-400 italic">None selected</span>
+                    <span className="text-[10px] text-zinc-400 italic">Geen folder gekozen</span>
                   )}
                 </div>
               </div>
 
               {/* Zünd Hotfolder */}
-              <div className="space-y-1.5 border-t border-zinc-100 pt-2.5">
-                <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 block">
-                  Zünd Hotfolder Destination
-                </label>
+              <div className="space-y-2 bg-zinc-50 border border-zinc-200/80 rounded-lg p-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 flex items-center space-x-1">
+                    <span>Aparte Zünd Hotfolder (Cut PDF's)</span>
+                  </label>
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <button
                     type="button"
+                    disabled={!isHotfolderRoutingEnabled}
                     onClick={handleSelectZundHotfolder}
-                    className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 text-[10px] font-bold py-1.5 px-2.5 rounded transition shrink-0"
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold py-1.5 px-2.5 rounded transition shrink-0 cursor-pointer disabled:opacity-50"
                   >
-                    Select Zünd Hotfolder
+                    {zundDirHandle ? 'Folder Wijzigen' : 'Selecteer Zünd Folder'}
                   </button>
                   {zundDirHandle ? (
-                    <span className="text-[11px] text-emerald-600 flex items-center space-x-1 min-w-0" id="zund-hotfolder-confirmation">
+                    <div className="flex items-center space-x-1.5 min-w-0 bg-white border border-emerald-200 px-2 py-1 rounded shadow-2xs">
                       <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span className="truncate font-semibold" title={zundDirHandle.name}>
+                      <span className="text-[11px] font-semibold text-emerald-700 truncate" title={zundDirHandle.name} id="zund-hotfolder-confirmation">
                         {zundDirHandle.name}
                       </span>
-                    </span>
+                      <button
+                        type="button"
+                        onClick={handleClearZundHotfolder}
+                        className="text-zinc-400 hover:text-red-500 p-0.5 rounded transition shrink-0 ml-1"
+                        title="Ontkoppel Zünd Folder"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   ) : (
-                    <span className="text-[10px] text-zinc-400 italic">None selected</span>
+                    <span className="text-[10px] text-zinc-400 italic">Geen folder gekozen</span>
                   )}
                 </div>
               </div>
